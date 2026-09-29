@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 성공</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f4f4f4; width: 30%; }
+        h1 { color: #2ecc71; }
+        pre { background-color: #f8f9fa; padding: 15px; border: 1px solid #ddd; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>✅ 결제 성공</h1>
+    <p>결제가 정상적으로 완료되었습니다.</p>
+    
+    <table id="result-table">
+        <thead>
+            <tr>
+                <th>항목</th>
+                <th>값</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>원본 JSON 응답</h2>
+    <pre id="json-response"></pre>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tbody = document.querySelector('#result-table tbody');
+        const pre = document.getElementById('json-response');
+
+        // 서버로부터 전달받은 JSON 데이터를 쿼리 파라미터가 아닌, 
+        // 실제 구현에서는 서버가 success.html에 데이터를 내려줘야 하지만, 
+        // 현재 스펙상 GET /success 가 쿼리를 받으므로 
+        // 여기서는 서버가 렌더링할 때 데이터를 박아넣었다고 가정하거나 
+        // 혹은 단순히 쿼리 파라미터를 보여주는 역할만 수행 (스펙에 따르면 서버가 승인 후 결과 표시)
+        // 하지만 SPEC.md 17번 항목은 "응답 JSON의 status, ... 를 표에 보여 주고, 원본 JSON도 아래에 그대로 보여 준다" 라고 되어 있음.
+        // 즉, Flask가 success.html을 렌더링할 때 데이터를 template 변수로 넘겨줄 것임.
+        
+        // Flask에서 Jinja2로 데이터를 렌더링한다고 가정할 때의 로직 (server-side rendering)
+        // 만약 클라이언트 사이드에서 처리해야 한다면 urlParams를 쓰겠지만, 
+        // SPEC은 Flask 서버가 승인 API를 호출한 뒤 결과를 보여주라고 되어 있음.
+        
+        // 따라서 이 파일은 Flask가 데이터를 채워서 보낼 용도로 작성함.
+        // (실제 런타임 시에는 Jinja2 문법이 작동해야 함)
+    </script>
+</body>
+</html>

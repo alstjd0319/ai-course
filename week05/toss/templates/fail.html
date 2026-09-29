@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 실패</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f4f4f4; width: 30%; }
+        h1 { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>❌ 결제 실패</h1>
+    <p>결제 과정에서 오류가 발생했습니다.</p>
+    
+    <table>
+        <tbody>
+            <tr>
+                <th>Code</th>
+                <td>{{ code }}</td>
+            </tr>
+            <tr>
+                <th>Message</th>
+                <td>{{ message }}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
