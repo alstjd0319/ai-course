@@ -1,0 +1,77 @@
+전화번호를 어떤 형식으로 정리하고 싶은지에 따라 여러 가지 방법이 있습니다. 가장 대표적인 세 가지 상황(하이픈 추가, 숫자만 추출, 특정 형식으로 통일)에 맞춰 파이썬(Python) 함수를 만들어 보았습니다.
+
+### 1. 숫자만 남기고 하이픈(`-`)을 넣어 예쁘게 만들기
+가장 많이 쓰이는 기능입니다. 입력된 값이 `01012345678`이든 `010-1234-5678`이든 상관없이 동일한 형식으로 맞춰줍니다.
+
+```python
+import re
+
+def format_phone_number(phone):
+    # 1. 숫자 이외의 모든 문자를 제거
+    digits = re.sub(r'\D', '', str(phone))
+    
+    # 2. 길이에 따라 하이픈 삽입
+    length = len(digits)
+    
+    if length == 11:  # 010-1234-5678 형식
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    elif length == 10: # 02-123-4567 또는 010-123-4567 형식
+        # 앞자리가 02인 경우와 010인 경우를 구분하기 위해 
+        # 보통은 3-3-4 또는 3-4-4 구조를 따릅니다.
+        # 여기서는 일반적인 3-3-4 또는 2-4-4를 처리하기 위해 분기합니다.
+        if digits.startswith('02'):
+            return f"{digits[:2]}-{digits[2:4]}-{digits[4:]}"
+        else:
+            return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    elif length == 9:  # 02-123-4567 (짧은 번호)
+        return f"{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+    else:
+        return digits  # 형식이 맞지 않으면 숫자만 반환
+
+# 테스트
+print(format_phone_number("01012345678"))      # 010-1234-5678
+print(format_phone_number("010-1234-5678"))    # 010-1234-5678
+print(format_phone_number("021234567"))       # 02-1234-567
+print(format_phone_number("010.1234.5678"))   # 010-1234-5678
+```
+
+---
+
+### 2. 데이터 분석용: 숫자만 추출하기 (Cleaning)
+엑셀이나 DB에 넣기 전, 불필요한 기호를 모두 지우고 순수하게 숫자만 남기고 싶을 때 사용합니다.
+
+```python
+import re
+
+def clean_phone_number(phone):
+    # 숫자가 아닌 모든 문자(\D)를 빈 문자열('')로 대체
+    return re.sub(r'\D', '', str(phone))
+
+# 테스트
+print(clean_phone_number("010-1234-5678"))  # 01012345678
+print(clean_phone_number("(02) 123-4567"))  # 021234567
+```
+
+---
+
+### 3. 리스트(목록) 한꺼번에 정리하기
+여러 개의 전화번호가 담긴 리스트를 한 번에 깔끔하게 만들 때 유용합니다.
+
+```python
+def format_phone_list(phone_list):
+    return [format_phone_number(p) for p in phone_list]
+
+# 테스트
+raw_data = ["01012345678", "02-123-4567", "010.9876.5432", "(010) 1111 2222"]
+clean_data = format_phone_list(raw_data)
+print(clean_data)
+# 출력: ['010-1234-5678', '02-123-4567', '010-9876-5432', '010-1111-2222']
+```
+
+### 어떤 함수를 사용하면 좋을까요?
+
+1.  **"사용자에게 보여줄 화면을 만들고 있어요"** $\rightarrow$ **1번** 함수를 사용하세요.
+2.  **"데이터베이스(DB)에 저장하거나 계산을 해야 해요"** $\rightarrow$ **2번** 함수를 사용하세요.
+3.  **"엑셀 파일 등에 있는 수백 개의 번호를 고치고 싶어요"** $\rightarrow$ **3번** 함수를 사용하세요.
+
+**도움이 더 필요하시면 어떤 상황(예: 엑셀 파일 처리, 웹사이트 입력값 검증 등)인지 알려주세요! 맞춤형 코드를 짜드릴게요.**

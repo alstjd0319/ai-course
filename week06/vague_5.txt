@@ -1,0 +1,91 @@
+전화번호를 어떤 형식으로 정리하고 싶은지에 따라 여러 가지 방법이 있습니다. 가장 흔히 쓰이는 세 가지 상황(하이픈 제거, 하이픈 추가, 특정 형식으로 통일)에 맞춘 Python 함수들을 만들어 보았습니다.
+
+### 1. 숫자만 남기기 (하이픈 및 공백 제거)
+데이터 분석이나 DB 저장을 위해 모든 특수문자를 제거하고 숫자만 추출할 때 사용합니다.
+
+```python
+import re
+
+def clean_phone_number(phone):
+    # 숫자가 아닌 모든 문자를 빈 문자열('')로 대체
+    return re.sub(r'\D', '', str(phone))
+
+# 테스트
+print(clean_phone_number("010-1234-5678"))  # 결과: 01012345678
+print(clean_phone_number("02.123.4567"))    # 결과: 021234567
+print(clean_phone_number("(010) 1234 5678")) # 결과: 01012345678
+```
+
+---
+
+### 2. 표준 하이픈 형식으로 만들기 (`010-XXXX-XXXX`)
+지저분한 번호들을 `010-1234-5678` 같은 보기 좋은 형태로 바꿀 때 사용합니다. 한국 전화번호 규칙을 적용했습니다.
+
+```python
+import re
+
+def format_phone_number(phone):
+    # 1. 일단 숫자만 추출
+    digits = re.sub(r'\D', '', str(phone))
+    
+    length = len(digits)
+    
+    # 2. 길이에 따라 하이픈 위치 지정
+    if length == 11:  # 010-1234-5678 형태
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    elif length == 10:
+        # 지역번호가 2자리인 경우 (02-123-4567) 또는 3자리인 경우 (010-123-4567)
+        if digits.startswith('02'):
+            return f"{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+        else:
+            return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    elif length == 9:  # 02-1234-5678 형태 등
+        return f"{digits[:2]}-{digits[2:6]}-{digits[6:]}"
+    else:
+        return digits  # 형식이 맞지 않으면 숫자만 반환
+
+# 테스트
+print(format_phone_number("01012345678"))     # 010-1234-5678
+print(format_phone_number("021234567"))       # 02-1234-567
+print(format_phone_number("010-123-4567"))   # 010-123-4567
+print(format_phone_number("(031) 123 4567"))  # 031-123-4567
+```
+
+---
+
+### 3. Pandas 데이터프레임 일괄 적용하기 (실무용)
+엑셀이나 CSV 파일을 불러와서 수천 개의 전화번호를 한 번에 정리할 때 가장 유용한 방식입니다.
+
+```python
+import pandas as pd
+import re
+
+def clean_phone_series(phone):
+    digits = re.sub(r'\D', '', str(phone))
+    if len(digits) == 11:
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    elif len(digits) == 10:
+        if digits.startswith('02'):
+            return f"{digits[:2]}-{digits[2:5]}-{digits[5:]}"
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    return digits
+
+# 예시 데이터 생성
+data = {
+    'name': ['김철수', '이영희', '박민수', '최지우'],
+    'phone': ['010-1111-2222', '02.333.4444', '01012345678', '(031) 555 6666']
+}
+df = pd.DataFrame(data)
+
+# 함수 적용
+df['phone_cleaned'] = df['phone'].apply(clean_phone_series)
+
+print(df)
+```
+
+### 요약 가이드
+1.  **DB 저장용:** `clean_phone_number` (숫자만 추출)를 사용하세요.
+2.  **화면 출력용:** `format_phone_number` (하이픈 추가)를 사용하세요.
+3.  **대량의 데이터:** `Pandas`와 함께 사용하세요.
+
+원하시는 특정 형식이 따로 있다면(예: 국가코드 `+82` 추가 등) 말씀해 주세요! 바로 수정해 드릴게요.

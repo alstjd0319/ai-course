@@ -1,0 +1,89 @@
+전화번호를 어떤 형식으로 정리하고 싶은지에 따라 여러 가지 방법이 있습니다. 가장 대표적인 세 가지 상황(하이픈 추가, 숫자만 추출, 특정 포맷으로 변환)에 맞춘 파이썬 함수들을 만들어 보았습니다.
+
+### 1. 숫자만 남기고 하이픈(`-`) 넣기 (가장 범용적)
+사용자가 `01012345678`, `010-1234-5678`, `010 1234 5678` 등 어떤 식으로 입력해도 표준 형식인 `010-1234-5678`로 통일합니다.
+
+```python
+import re
+
+def format_phone_number(phone_str):
+    # 1. 숫자 이외의 모든 문자 제거
+    digits = re.sub(r'\D', '', phone_str)
+    
+    # 2. 길이에 따른 포맷팅
+    length = len(digits)
+    
+    if length == 11:  # 010-1234-5678 형식
+        return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+    elif length == 10: # 02-123-4567 또는 010-123-4567 형식
+        # 앞자리가 02(서울)인지 010/011 등인지 구분하여 처리 가능하지만, 
+        # 일반적인 경우 앞 3자리/3자리/4자리로 나눔
+        return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+    elif length == 9:  # 02-12-3456 형식
+        return f"{digits[:2]}-{digits[2:4]}-{digits[4:]}"
+    else:
+        # 형식이 맞지 않으면 원래 숫자만 반환하거나 에러 메시지 반환
+        return digits
+
+# 테스트
+test_numbers = ["01012345678", "010-1234-5678", "010 1234 5678", "021234567", "0101234567"]
+for num in test_numbers:
+    print(f"{num}  =>  {format_phone_number(num)}")
+```
+
+---
+
+### 2. 데이터 정제용 (숫자만 추출하기)
+엑셀이나 DB에 넣기 위해 모든 특수문자를 제거하고 **숫자만** 남기고 싶을 때 사용합니다.
+
+```python
+import re
+
+def clean_phone_number(phone_str):
+    # 숫자가 아닌 모든 문자를 빈 문자열로 대체
+    return re.sub(r'\D', '', phone_str)
+
+# 테스트
+print(clean_phone_number("010-1234-5678")) # 출력: 01012345678
+print(clean_phone_number("(02) 123-4567")) # 출력: 021234567
+```
+
+---
+
+### 3. Pandas를 이용한 대량 데이터 정리 (엑셀/CSV용)
+데이터 분석을 할 때 엑셀 파일에 있는 수천 개의 전화번호를 한 번에 정리할 때 유용합니다.
+
+```python
+import pandas as pd
+import re
+
+def format_phone_series(phone_series):
+    def apply_format(val):
+        if pd.isna(val): return val # 결측치 처리
+        digits = re.sub(r'\D', '', str(val))
+        if len(digits) == 11:
+            return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+        elif len(digits) == 10:
+            return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        return digits
+
+    return phone_series.apply(apply_format)
+
+# 예시 데이터프레임 생성
+df = pd.DataFrame({
+    'name': ['김철수', '이영희', '박민수', '최지우'],
+    'phone': ['01012345678', '02-123-4567', '010.9876.5432', None]
+})
+
+# 함수 적용
+df['phone_cleaned'] = format_phone_series(df['phone'])
+
+print(df)
+```
+
+### 요약 가이드
+*   **사용자 입력 화면을 만들 때:** 1번 함수를 사용하여 사용자가 입력한 값을 보기 좋게 바꿔줍니다.
+*   **DB에 저장할 때:** 2번 함수를 사용하여 순수 숫자만 깔끔하게 저장합니다.
+*   **엑셀 파일을 정리할 때:** 3번 방식(Pandas)을 사용하여 한 번에 처리합니다.
+
+원하시는 특정 형식이 더 있다면 말씀해 주세요! (예: 국가번호 +82 포함 등)
