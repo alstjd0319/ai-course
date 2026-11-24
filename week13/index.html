@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>나눠 내기 계산기</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text: #333;
+            --err: #e74c3c;
+        }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0; padding: 15px;
+            display: flex; justify-content: center;
+        }
+        .container { width: 100%; max-width: 450px; }
+        h1 { text-align: center; font-size: 1.4rem; }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .res-card { background: var(--primary); color: white; text-align: center; }
+        .res-val { font-size: 2rem; font-weight: bold; margin-top: 5px; }
+        .res-lbl { font-size: 0.85rem; opacity: 0.9; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 0.9rem; }
+        input {
+            width: 100%; padding: 12px; border: 1px solid #ddd;
+            border-radius: 8px; box-sizing: border-box; font-size: 1rem; margin-bottom: 12px;
+        }
+        .btn {
+            display: block; width: 100%; padding: 14px;
+            background: var(--primary); color: white; border: none;
+            border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;
+        }
+        #fileInput { display: none; }
+        .status { text-align: center; margin: 10px 0; font-size: 0.9rem; min-height: 1.2em; }
+        .err { color: var(--err); }
+        .loading { color: var(--primary); }
+        .item-list { list-style: none; padding: 0; margin: 0; }
+        .item-list li {
+            display: flex; justify-content: space-between;
+            padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>💸 나눠 내기</h1>
+    <div class="card res-card">
+        <div class="res-lbl">1인당 금액</div>
+        <div id="perPersonRes" class="res-val">0원</div>
+    </div>
+    <div class="card">
+        <label>총 금액 (원)</label>
+        <input type="number" id="totalAmt" placeholder="0" oninput="calc()">
+        <label>인원 수 (명)</label>
+        <input type="number" id="peopleCnt" value="1" min="1" oninput="calc()">
+    </div>
+    <div class="card">
+        <label for="fileInput" class="btn" style="text-align:center;">📷 영수증 사진 찍기</label>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleImg(event)">
+        <div id="status" class="status"></div>
+        <ul id="itemList" class="item-list"></ul>
+    </div>
+</div>
+<script>
+    async function ask(prompt, imageUrl) {
+        const content = [{ type: "text", text: prompt }];
+        if (imageUrl) content.push({ type: "image_url", image_url: { url: imageUrl } });
+        const r = await fetch("https://krchoi.com/gemma4/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: "gemma4", messages: [{ role: "user", content: content }] })
+        });
+        const data = await r.json();
+        return data.choices[0].message.content;
+    }
+    function parseJson(text) {
+        const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+        try { return JSON.parse(m ? m[1] : text); } catch (e) { return null; }
+    }
+    function shrinkImage(file, maxSize = 1280) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL("image/jpeg", 0.85));
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    }
+    function calc() {
+        const t = parseFloat(document.getElementById('totalAmt').value) || 0;
+        const p = parseInt(document.getElementById('peopleCnt').value) || 1;
+        document.getElementById('perPersonRes').innerText = Math.round(t/p).toLocaleString() + "원";
+    }
+    async function handleImg(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const st = document.getElementById('status');
+        const liContainer = document.getElementById('itemList');
+        const tIn = document.getElementById('totalAmt');
+        st.innerText = "읽는 중..."; st.className = "status loading";
+        liContainer.innerHTML = "";
+        try {
+            const url = await shrinkImage(file);
+            const prmpt = "영수증 사진에서 항목과 금액을 추출해서 JSON 리스트로만 답해줘. 형식: [{\"item\": \"상품명\", \"price\": 1000}, ...]";
+            const res = await ask(prmpt, url);
+            const items = parseJson(res);
+            if(items && Array.isArray(items)) {
+                let s = 0;
+                items.forEach(it => {
+                    const l = document.createElement('li');
+                    l.innerHTML = `<span>${it.item}</span><b>${it.price.toLocaleString()}원</b>`;
+                    liContainer.appendChild(l);
+                    s += it.price;
+                });
+                tIn.value = s; calc();
+                st.innerText = ""; st.className = "status";
+            } else throw new Error();
+        } catch(err) {
+            st.innerText = "읽지 못했습니다"; st.className = "status err";
+        } finally { e.target.value = ""; }
+    }
+</script>
+</body>
+</html>
